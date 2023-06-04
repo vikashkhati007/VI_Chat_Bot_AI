@@ -1,4 +1,7 @@
 /** @type {import('next').NextConfig} */
-const nextConfig = {}
+require('dotenv').config()
+const nextConfig = {
+    experimental: {serverActions: true}
+}
 
 module.exports = nextConfig
