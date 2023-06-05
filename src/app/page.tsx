@@ -4,10 +4,10 @@ import Input from "./components/input";
 import Button from "./components/button";
 import Conversation from "./components/conversation";
 export default function Home() {
-  const [data, setData] = useState({
+  const [data, setData] = useState([{
     userdata: "",
     aidata: ""
-  });
+  }]);
   const [loading, setloading] = useState(false);
   async function inputhandler(formdata: FormData) {
     const userquery = formdata.get("query");
@@ -26,22 +26,31 @@ export default function Home() {
     const res = await fetch(url, options);
     const response = await res.json();
     setloading(false);
-    setData(prevData => ({
-      ...prevData,            // Spread operator to retain existing aidata
-      userdata: `${formdata.get("query")}`,
-      aidata: response.response   // Update only the userdata property
-    }));
+    setData(prevData => ([
+      ...prevData,                  // Spread operator to retain existing data
+      {
+        userdata: `${formdata.get("query")}`,
+        aidata: response.response
+      }
+    ]));
   }
 
   return (
     <>
       <div className="pagecontainer bg-[#353740] w-full h-screen flex justify-center items-center">
         <div className="chatcontainer w-[80%] h-[90%] overflow-hidden relative z-10 bg-black bg-opacity-50 rounded-lg">
-          <div className="aioutputcontainer h-[90%] overflow-y-auto p-5">
-            <Conversation aidata={data.aidata} userdata={data.userdata} />
+          <div className="aioutputcontainer h-[90%] overflow-y-auto p-5 overflow-x-hidden">
+           {data.slice(1).map((d)=>{
+            return(
+              <>
+            <Conversation key={d.aidata} aidata={d.aidata} userdata={d.userdata} />
+            <hr className="w-[100%] my-5 opacity-10"/>
+            </>
+            )
+          })}
           </div>
           <form action={inputhandler}>
-            <div className="inputcontainer absolute bottom-3 w-[100%] flex justify-between p-5">
+            <div className="inputcontainer absolute bottom-1 w-[100%] flex justify-between p-5">
               <div className="w-[70%]">
                 <Input />
               </div>

@@ -7,8 +7,8 @@ const Button = ({src,onCLick}:any) => {
        <Image
           src={`${src}`}
           alt="send"
-          width={40}
-          height={40}
+          width={45}
+          height={45}
           onClick={onCLick}
         ></Image>
       </button>
