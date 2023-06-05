@@ -3,7 +3,7 @@ import Image from "next/image";
 const Button = ({src,onCLick}:any) => {
   return (
     <>
-      <button className="">
+      <button >
        <Image
           src={`${src}`}
           alt="send"

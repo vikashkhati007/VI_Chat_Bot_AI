@@ -51,10 +51,10 @@ export default function Home() {
           </div>
           <form action={inputhandler}>
             <div className="inputcontainer absolute bottom-1 w-[100%] flex justify-between p-5">
-              <div className="w-[70%]">
+              <div className="w-[80%]">
                 <Input />
               </div>
-              <div className="w-[20%]">
+              <div className="w-[10%]">
                 {!loading ? (
                   <Button
                     src="/sendbutton/send.png"
