@@ -1,6 +1,6 @@
 "use client"
 import Image from "next/image";
-const Button = ({src,onCLick}:any) => {
+const Button = ({src,onClick}:any) => {
   return (
     <>
       <button >
@@ -9,7 +9,7 @@ const Button = ({src,onCLick}:any) => {
           alt="send"
           width={45}
           height={45}
-          onClick={onCLick}
+          onClick={onClick}
         ></Image>
       </button>
     </>
