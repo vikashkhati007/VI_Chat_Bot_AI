@@ -2,6 +2,7 @@ const Input = ({ onChange, value, onKeyDown,id }: any) => {
   return (
     <div>
       <input
+        autoComplete="off"
         id={id}
         onKeyDown={onKeyDown}
         onChange={onChange}
