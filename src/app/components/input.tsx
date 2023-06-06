@@ -1,7 +1,8 @@
-const Input = ({ onChange, value, onKeyDown }: any) => {
+const Input = ({ onChange, value, onKeyDown,id }: any) => {
   return (
     <div>
       <input
+        id={id}
         onKeyDown={onKeyDown}
         onChange={onChange}
         value={value}
