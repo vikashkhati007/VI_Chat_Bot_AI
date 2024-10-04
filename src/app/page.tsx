@@ -1,206 +1,270 @@
-"use client";
-import { useState } from "react";
-import Input from "./components/input";
-import Button from "./components/button";
-import Conversation from "./components/conversation";
-import React from "react";
+// @ts-nocheck
 
-export default function Home() {
-  const [data, setData] = useState([
-    {
-      userdata: "",
-      aidata: "",
-    },
-  ]);
-  const [loading, setloading] = useState(false);
-  const [loading2, setloading2] = useState(false);
-  const [userInput, setUserInput] = useState("");
-  async function inputHandler(formdata: FormData) {
-    const userquery = formdata.get("query");
-    const url = `${process.env.NEXT_PUBLIC_HOST_URL}`;
-    const options = {
-      method: "POST",
-      headers: {
-        "content-type": "application/json",
-        "X-RapidAPI-Key": `${process.env.NEXT_PUBLIC_APIKEY_URL}`,
-        "X-RapidAPI-Host": `${process.env.NEXT_PUBLIC_APIHOST}`,
-      },
-      body: JSON.stringify({
-        query: userquery,
-      }),
-    };
-    const res = await fetch(url, options);
-    const response = await res.json();
-    setloading(false);
-    setData((prevData) => [
-      ...prevData, // Spread operator to retain existing data
-      {
-        userdata: `${formdata.get("query")}`,
-        aidata: response.response,
-      },
-    ]);
-    setUserInput("");
-  }
+"use client"
+import { useState, useRef, useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { X, ChevronRight, Sparkles, Mic, Send, Loader2 } from "lucide-react";
+import ReactMarkdown from "react-markdown";
+import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
+import { atomDark } from "react-syntax-highlighter/dist/esm/styles/prism";
 
-  function keyPressFunction(e: any) {
-    if (e.key === "Enter") {
-      setloading(true);
+export default function AdvancedAIChatbot() {
+  const [messages, setMessages] = useState([]);
+  const [input, setInput] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [isListening, setIsListening] = useState(false);
+  const [error, setError] = useState(null);
+  const scrollAreaRef = useRef(null);
+
+  useEffect(() => {
+    if (scrollAreaRef.current) {
+      scrollAreaRef.current.scrollTop = scrollAreaRef.current.scrollHeight;
     }
-  }
-  function enterPressFunction() {
-    setloading(true);
-  }
+  }, [messages]);
 
-  function handleSpeechRecognition(e: any) {
-    setloading2(true);
-    e.preventDefault();
-    var speech = true;
-    window.SpeechRecognition = window.webkitSpeechRecognition;
-    const recognition = new SpeechRecognition();
-    recognition.interimResults = true;
+  const handleSubmit = async (query) => {
+    if (!query.trim()) return;
 
-    recognition.addEventListener("result", (e) => {
-      const transcript = Array.from(e.results)
-        .map((result) => result[0])
-        .map((result) => result.transcript)
-        .join("");
+    setMessages((prev) => [...prev, { role: "user", content: query }]);
+    setIsLoading(true);
+    setError(null);
 
-      setUserInput(transcript);
-    });
+    try {
+      const url = `${process.env.NEXT_PUBLIC_HOST_URL}`;
+      const options = {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          "X-RapidAPI-Key": `${process.env.NEXT_PUBLIC_APIKEY_URL}`,
+          "X-RapidAPI-Host": `${process.env.NEXT_PUBLIC_APIHOST}`,
+        },
+        body: JSON.stringify({
+          query,
+        }),
+      };
 
-    recognition.addEventListener("end", () => {
-      setloading2(false);
-    });
+      const res = await fetch(url, options);
+      const response = await res.json();
 
-    if (speech) {
-      recognition.start();
+      if (!res.ok) {
+        throw new Error(`HTTP error! status: ${res.status}`);
+      }
+
+      const aiResponse = response.response;
+
+      setMessages((prev) => [
+        ...prev,
+        { role: "assistant", content: aiResponse },
+      ]);
+    } catch (error) {
+      console.error("Error:", error);
+      setError(`An error occurred: ${error.message}. Please try again.`);
+    } finally {
+      setIsLoading(false);
     }
-  }
-  console.log(data.length);
+  };
+
+  // Function to handle button actions
+  const handleAction = (actionType) => {
+    let query;
+    switch (actionType) {
+      case "summary":
+        query = "Please generate a summary.";
+        break;
+      case "jobFit":
+        query = "Check job fit for me.";
+        break;
+      case "trainingStyle":
+        query = "Analyze training style.";
+        break;
+      default:
+        query = "";
+    }
+
+    handleSubmit(query);
+  };
+
+  const handleSpeechRecognition = () => {
+    if (!("webkitSpeechRecognition" in window)) {
+      setError("Speech recognition is not supported in your browser.")
+      return
+    }
+  
+    const recognition = new window.webkitSpeechRecognition()
+    recognition.continuous = false
+    recognition.interimResults = true
+  
+    recognition.onstart = () => setIsListening(true)
+    recognition.onend = () => setIsListening(false)
+    recognition.onresult = (event) => {
+      const transcript = Array.from(event.results)
+        .map((result) => result[0].transcript)
+        .join("")
+      setInput(transcript)
+    }
+    recognition.onerror = (event) => {
+      setError(`Speech recognition error: ${event.error}`)
+    }
+  
+    recognition.start()
+  };
 
   return (
-    <>
-      <div className="pagecontainer bg-[#353740] w-full h-screen flex justify-center items-center">
-        <div className="chatcontainer w-[90%] h-[90%] overflow-hidden relative z-10 bg-black bg-opacity-50 rounded-lg overflow-y-scroll">
-          {data.length < 2 ? (
-            <>
-              <div className="container mx-auto p-8 ">
-                <h1 className="text-3xl font-bold mb-6">
-                  VI Ai Bot: 24/7 Unlimited Free AI Assistance
-                </h1>
-                <div className="grid grid-cols-1 gap-6 opacity-80">
-                  <div>
-                    <h2 className="text-md font-semibold mb-2">
-                      1. 24/7 Availability
-                    </h2>
-                    <p className="text-xs">
-                      VI Ai Bot is available 24 hours a day, seven days a week,
-                      ensuring continuous support and assistance whenever users
-                      need it.
-                    </p>
-                  </div>
-
-                  <div>
-                    <h2 className="text-md font-semibold mb-2">
-                      2. Unlimited Usage
-                    </h2>
-                    <p className="text-xs">
-                      VI Ai Bot offers unlimited usage, allowing users to
-                      interact with the bot without any restrictions on the
-                      number of queries or tasks they can perform.
-                    </p>
-                  </div>
-
-                  <div>
-                    <h2 className="text-md font-semibold mb-2">
-                      3. Seamless User Experience
-                    </h2>
-                    <p className="text-xs">
-                      VI Ai Bot is designed to deliver a seamless user
-                      experience, making it easy and intuitive for users to
-                      interact with the bot.
-                    </p>
-                  </div>
-
-                  <div>
-                    <h2 className="text-md font-semibold mb-2">
-                      4. Diverse Range of Support
-                    </h2>
-                    <p className="text-xs">
-                      VI Ai Bot is equipped with a vast knowledge base and can
-                      provide assistance on various topics, including general
-                      knowledge, problem-solving, recommendations, and more.
-                    </p>
-                  </div>
-
-                  <div>
-                    <h2 className="text-md font-semibold mb-2">
-                      5. Natural Language Processing (NLP)
-                    </h2>
-                    <p className="text-xs">
-                      VI Ai Bot utilizes advanced Natural Language Processing
-                      (NLP) capabilities to understand and interpret user
-                      queries and responses accurately.
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </>
-          ) : (
-            <>
-            <div className="aioutputcontainer h-[90%] px-8 py-5 overflow-y-scroll">
-              {data.slice(1).map((d) => {
-                return (
-                  <>
-                    <Conversation
-                      key={d.aidata}
-                      aidata={<pre className="pre-wrap">{d.aidata}</pre>}
-                      userdata={<pre className="pre-wrap">{d.userdata}</pre>}
-                    />
-                    <hr className="w-[100%] my-5 opacity-10" />
-                  </>
-                );
-              })}
+    <div className="flex items-center justify-center min-h-screen bg-gray-100 p-4">
+      <motion.div
+        initial={{ scale: 0.9, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        transition={{ duration: 0.3 }}
+        className="w-full max-w-6xl bg-white rounded-3xl shadow-xl overflow-hidden flex flex-col md:flex-row"
+      >
+        <div className="md:w-1/3 p-6 bg-green-50">
+          <div className="flex justify-between items-center mb-6">
+            <div className="flex items-center space-x-2">
+              <Sparkles className="w-6 h-6 text-green-500" />
+              <span className="text-xl font-semibold text-gray-800">
+                VI AI Assistant
+              </span>
             </div>
-          </>
-          )}
-          <form action={inputHandler}>
-            <div className="inputcontainer absolute -translate-y-5 w-[100%] flex justify-between px-8 py-3 gap-5 items-center">
-              <div className="w-[80%]">
-                <Input
-                  id="convert_text"
-                  onKeyDown={keyPressFunction}
-                  onChange={(e: any) => {
-                    setUserInput(e.target.value);
-                  }}
-                  value={userInput}
-                />
-              </div>
-              <div className="w-[2.7rem] flex flex-1 gap-4 items-center">
-                {!loading2 ? (
-                  <Button
-                    src="/voice/voice.png"
-                    onClick={handleSpeechRecognition}
-                    id="click_to_record"
-                  />
+            <button className="text-gray-500 hover:text-gray-700">
+              <X className="w-6 h-6" />
+            </button>
+          </div>
+          <div className="flex justify-center mb-6">
+            <motion.div
+              animate={{ scale: [1, 1.05, 1] }}
+              transition={{ repeat: Infinity, duration: 3 }}
+              className="w-24 h-24 bg-gradient-to-br from-green-400 to-green-600 rounded-full shadow-lg"
+            />
+          </div>
+          <div className="space-y-4">
+            <motion.button
+              whileHover={{ scale: 1.03 }}
+              whileTap={{ scale: 0.98 }}
+              className="w-full py-2 px-4 bg-white text-gray-800 rounded-full border border-gray-300 shadow-sm hover:shadow-md transition-shadow duration-200"
+              onClick={() => handleAction("summary")}
+            >
+              Generate Summary
+            </motion.button>
+            <motion.button
+              whileHover={{ scale: 1.03 }}
+              whileTap={{ scale: 0.98 }}
+              className="w-full py-2 px-4 bg-white text-gray-800 rounded-full border border-gray-300 shadow-sm hover:shadow-md transition-shadow duration-200"
+              onClick={() => handleAction("jobFit")}
+            >
+              Check Job Fit
+            </motion.button>
+            <motion.button
+              whileHover={{ scale: 1.03 }}
+              whileTap={{ scale: 0.98 }}
+              className="w-full py-2 px-4 bg-white text-gray-800 rounded-full border border-gray-300 shadow-sm hover:shadow-md transition-shadow duration-200"
+              onClick={() => handleAction("trainingStyle")}
+            >
+              Analyze Training Style
+            </motion.button>
+          </div>
+        </div>
+        <div className="md:w-2/3 p-6 flex flex-col">
+          {/* Chat Scrollable Area */}
+          <div
+            ref={scrollAreaRef}
+            className="flex-grow overflow-y-auto space-y-4 mb-4 h-[300px] md:h-[500px] scrollbar-thin scrollbar-thumb-rounded-lg scrollbar-thumb-green-500"
+          >
+            <AnimatePresence initial={false}>
+              {messages.map((message, index) => (
+                <motion.div
+                  key={index}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -20 }}
+                  transition={{ duration: 0.3 }}
+                  className={`${
+                    message.role === "user" ? "text-right" : "text-left"
+                  }`}
+                >
+                  <div
+                    className={`inline-block p-3 rounded-lg ${
+                      message.role === "user"
+                        ? "bg-green-500 text-white"
+                        : "bg-gray-200 text-gray-900"
+                    }`}
+                  >
+                    <ReactMarkdown
+                      components={{
+                        code({ node, inline, className, children, ...props }) {
+                          const match = /language-(\w+)/.exec(className || "");
+                          return !inline && match ? (
+                            <SyntaxHighlighter
+                              style={atomDark}
+                              language={match[1]}
+                              PreTag="div"
+                              {...props}
+                            >
+                              {String(children).replace(/\n$/, "")}
+                            </SyntaxHighlighter>
+                          ) : (
+                            <code className={className} {...props}>
+                              {children}
+                            </code>
+                          );
+                        },
+                      }}
+                    >
+                      {message.content}
+                    </ReactMarkdown>
+                  </div>
+                </motion.div>
+              ))}
+            </AnimatePresence>
+          </div>
+          {error && <div className="text-red-500 mb-4">{error}</div>}
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              handleSubmit(input);
+            }}
+            className="relative"
+          >
+            <input
+              type="text"
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              placeholder="Ask me anything..."
+              className="w-full py-3 px-4 pr-24 bg-gray-100 rounded-full text-gray-800 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-green-500"
+            />
+            <div className="absolute right-2 top-1/2 transform -translate-y-1/2 flex space-x-2">
+              <button
+                type="button"
+                onClick={handleSpeechRecognition}
+                disabled={isLoading}
+                className="p-2 text-green-500 hover:text-green-600 disabled:opacity-50"
+              >
+                {isListening ? (
+                  <Loader2 className="w-5 h-5 animate-spin" />
                 ) : (
-                  <Button src="/voice/stop.png" />
+                  <Mic className="w-5 h-5" />
                 )}
-                {!loading ? (
-                  <Button
-                    id="myButton"
-                    className={"button"}
-                    src="/sendbutton/send.png"
-                    onClick={enterPressFunction}
-                  />
+              </button>
+              <button
+                type="submit"
+                disabled={isLoading || !input.trim()}
+                className="p-2 text-green-500 hover:text-green-600 disabled:opacity-50"
+              >
+                {isLoading ? (
+                  <Loader2 className="w-5 h-5 animate-spin" />
                 ) : (
-                  <Button src="/sendbutton/loading.png" className={"button"} />
+                  <Send className="w-5 h-5" />
                 )}
-              </div>
+              </button>
             </div>
           </form>
+          <div className="mt-4">
+            <button className="flex items-center space-x-2 text-green-500 hover:text-green-600">
+              <Sparkles className="w-5 h-5" />
+              <span>Topics</span>
+            </button>
+          </div>
         </div>
-      </div>
-    </>
+      </motion.div>
+    </div>
   );
 }
