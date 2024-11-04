@@ -1,270 +1,188 @@
-// @ts-nocheck
-
 "use client"
-import { useState, useRef, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { X, ChevronRight, Sparkles, Mic, Send, Loader2 } from "lucide-react";
-import ReactMarkdown from "react-markdown";
-import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
-import { atomDark } from "react-syntax-highlighter/dist/esm/styles/prism";
 
-export default function AdvancedAIChatbot() {
-  const [messages, setMessages] = useState([]);
-  const [input, setInput] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
-  const [isListening, setIsListening] = useState(false);
-  const [error, setError] = useState(null);
-  const scrollAreaRef = useRef(null);
+import { useState, useRef, useEffect } from "react"
+import { Button } from "@/components/ui/button"
+import { Card } from "@/components/ui/card"
+import { Input } from "@/components/ui/input"
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { ScrollArea } from "@/components/ui/scroll-area"
+import { Folder, Image, MessageSquare, Mic, Music, PlusCircle, Send, Settings, Sparkles, TrendingUp } from "lucide-react"
+
+export default function Component() {
+  const [messages, setMessages] = useState([])
+  const [input, setInput] = useState("")
+  const [isLoading, setIsLoading] = useState(false)
+  const scrollRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    if (scrollAreaRef.current) {
-      scrollAreaRef.current.scrollTop = scrollAreaRef.current.scrollHeight;
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight
     }
-  }, [messages]);
+  }, [messages])
 
-  const handleSubmit = async (query) => {
-    if (!query.trim()) return;
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!input.trim()) return
 
-    setMessages((prev) => [...prev, { role: "user", content: query }]);
-    setIsLoading(true);
-    setError(null);
+    setMessages((prev) => [...prev, { role: "user", content: input }])
+    setInput("")
+    setIsLoading(true)
 
-    try {
-      const url = `${process.env.NEXT_PUBLIC_HOST_URL}`;
-      const options = {
-        method: "POST",
-        headers: {
-          "content-type": "application/json",
-          "X-RapidAPI-Key": `${process.env.NEXT_PUBLIC_APIKEY_URL}`,
-          "X-RapidAPI-Host": `${process.env.NEXT_PUBLIC_APIHOST}`,
-        },
-        body: JSON.stringify({
-          query,
-        }),
-      };
-
-      const res = await fetch(url, options);
-      const response = await res.json();
-
-      if (!res.ok) {
-        throw new Error(`HTTP error! status: ${res.status}`);
-      }
-
-      const aiResponse = response.response;
-
-      setMessages((prev) => [
-        ...prev,
-        { role: "assistant", content: aiResponse },
-      ]);
-    } catch (error) {
-      console.error("Error:", error);
-      setError(`An error occurred: ${error.message}. Please try again.`);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // Function to handle button actions
-  const handleAction = (actionType) => {
-    let query;
-    switch (actionType) {
-      case "summary":
-        query = "Please generate a summary.";
-        break;
-      case "jobFit":
-        query = "Check job fit for me.";
-        break;
-      case "trainingStyle":
-        query = "Analyze training style.";
-        break;
-      default:
-        query = "";
-    }
-
-    handleSubmit(query);
-  };
-
-  const handleSpeechRecognition = () => {
-    if (!("webkitSpeechRecognition" in window)) {
-      setError("Speech recognition is not supported in your browser.")
-      return
-    }
-  
-    const recognition = new window.webkitSpeechRecognition()
-    recognition.continuous = false
-    recognition.interimResults = true
-  
-    recognition.onstart = () => setIsListening(true)
-    recognition.onend = () => setIsListening(false)
-    recognition.onresult = (event) => {
-      const transcript = Array.from(event.results)
-        .map((result) => result[0].transcript)
-        .join("")
-      setInput(transcript)
-    }
-    recognition.onerror = (event) => {
-      setError(`Speech recognition error: ${event.error}`)
-    }
-  
-    recognition.start()
-  };
+    // Simulate AI response
+    setTimeout(() => {
+      setMessages((prev) => [...prev, { role: "assistant", content: "I'm here to help! What would you like to know?" }])
+      setIsLoading(false)
+    }, 1000)
+  }
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gray-100 p-4">
-      <motion.div
-        initial={{ scale: 0.9, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        transition={{ duration: 0.3 }}
-        className="w-full max-w-6xl bg-white rounded-3xl shadow-xl overflow-hidden flex flex-col md:flex-row"
-      >
-        <div className="md:w-1/3 p-6 bg-green-50">
-          <div className="flex justify-between items-center mb-6">
-            <div className="flex items-center space-x-2">
-              <Sparkles className="w-6 h-6 text-green-500" />
-              <span className="text-xl font-semibold text-gray-800">
-                VI AI Assistant
-              </span>
-            </div>
-            <button className="text-gray-500 hover:text-gray-700">
-              <X className="w-6 h-6" />
-            </button>
-          </div>
-          <div className="flex justify-center mb-6">
-            <motion.div
-              animate={{ scale: [1, 1.05, 1] }}
-              transition={{ repeat: Infinity, duration: 3 }}
-              className="w-24 h-24 bg-gradient-to-br from-green-400 to-green-600 rounded-full shadow-lg"
-            />
-          </div>
-          <div className="space-y-4">
-            <motion.button
-              whileHover={{ scale: 1.03 }}
-              whileTap={{ scale: 0.98 }}
-              className="w-full py-2 px-4 bg-white text-gray-800 rounded-full border border-gray-300 shadow-sm hover:shadow-md transition-shadow duration-200"
-              onClick={() => handleAction("summary")}
-            >
-              Generate Summary
-            </motion.button>
-            <motion.button
-              whileHover={{ scale: 1.03 }}
-              whileTap={{ scale: 0.98 }}
-              className="w-full py-2 px-4 bg-white text-gray-800 rounded-full border border-gray-300 shadow-sm hover:shadow-md transition-shadow duration-200"
-              onClick={() => handleAction("jobFit")}
-            >
-              Check Job Fit
-            </motion.button>
-            <motion.button
-              whileHover={{ scale: 1.03 }}
-              whileTap={{ scale: 0.98 }}
-              className="w-full py-2 px-4 bg-white text-gray-800 rounded-full border border-gray-300 shadow-sm hover:shadow-md transition-shadow duration-200"
-              onClick={() => handleAction("trainingStyle")}
-            >
-              Analyze Training Style
-            </motion.button>
+    <div className="flex h-screen bg-black/95">
+      {/* Sidebar */}
+      <div className="w-64 bg-gray-900 p-4 flex flex-col gap-4">
+        <div className="flex items-center gap-2 px-2 py-1">
+          <Sparkles className="w-5 h-5 text-green-500" />
+          <span className="font-semibold text-white">My Chats</span>
+        </div>
+        <Input className="bg-gray-800 border-0 text-white placeholder:text-gray-400" placeholder="Search" />
+        <div className="space-y-2">
+          <div className="text-sm text-gray-400 px-2">Folders</div>
+          <Button variant="ghost" className="w-full justify-start text-white">
+            <Folder className="w-4 h-4 mr-2" />
+            Work chats
+          </Button>
+          <Button variant="ghost" className="w-full justify-start text-white">
+            <Folder className="w-4 h-4 mr-2" />
+            Life chats
+          </Button>
+          <Button variant="ghost" className="w-full justify-start text-white">
+            <Folder className="w-4 h-4 mr-2" />
+            Projects chats
+          </Button>
+          <Button variant="ghost" className="w-full justify-start text-white">
+            <Folder className="w-4 h-4 mr-2" />
+            Clients chats
+          </Button>
+        </div>
+        <Button className="mt-auto bg-green-500 hover:bg-green-600">
+          <PlusCircle className="w-4 h-4 mr-2" />
+          New chat
+        </Button>
+      </div>
+
+      {/* Main Content */}
+      <div className="flex-1 flex flex-col">
+        {/* Header */}
+        <div className="border-b border-gray-800 p-4 flex justify-between items-center">
+          <h1 className="text-xl font-semibold text-white">New chat</h1>
+          <div className="flex gap-2">
+            <Button variant="ghost" size="icon">
+              <Settings className="w-4 h-4 text-gray-400" />
+            </Button>
           </div>
         </div>
-        <div className="md:w-2/3 p-6 flex flex-col">
-          {/* Chat Scrollable Area */}
-          <div
-            ref={scrollAreaRef}
-            className="flex-grow overflow-y-auto space-y-4 mb-4 h-[300px] md:h-[500px] scrollbar-thin scrollbar-thumb-rounded-lg scrollbar-thumb-green-500"
-          >
-            <AnimatePresence initial={false}>
-              {messages.map((message, index) => (
-                <motion.div
-                  key={index}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -20 }}
-                  transition={{ duration: 0.3 }}
-                  className={`${
-                    message.role === "user" ? "text-right" : "text-left"
-                  }`}
+
+        {/* Chat Area */}
+        <ScrollArea ref={scrollRef} className="flex-1 p-4">
+          {messages.length === 0 ? (
+            <div className="h-full flex flex-col items-center justify-center gap-8 text-center p-4">
+              <div className="w-20 h-20 rounded-full bg-gradient-to-br from-green-400 to-green-600 flex items-center justify-center">
+                <Sparkles className="w-10 h-10 text-white" />
+              </div>
+              <div className="space-y-2">
+                <h2 className="text-2xl font-semibold text-white">How can I help you today?</h2>
+                <p className="text-gray-400 max-w-md">
+                  This chat will display a prompt asking the user for their intent, and then it will display a streaming
+                  message with the name entered by the user.
+                </p>
+              </div>
+              <div className="grid grid-cols-3 gap-4 w-full max-w-2xl">
+                <Card className="p-4 bg-gray-800 border-gray-700">
+                  <div className="flex flex-col items-center gap-2 text-center">
+                    <MessageSquare className="w-8 h-8 text-green-500" />
+                    <h3 className="font-medium text-white">Saved Prompt Templates</h3>
+                    <p className="text-sm text-gray-400">Use & save prompt templates for better responses</p>
+                  </div>
+                </Card>
+                <Card className="p-4 bg-gray-800 border-gray-700">
+                  <div className="flex flex-col items-center gap-2 text-center">
+                    <Image className="w-8 h-8 text-green-500" />
+                    <h3 className="font-medium text-white">Media Type Selection</h3>
+                    <p className="text-sm text-gray-400">Use different media types for better results</p>
+                  </div>
+                </Card>
+                <Card className="p-4 bg-gray-800 border-gray-700">
+                  <div className="flex flex-col items-center gap-2 text-center">
+                    <TrendingUp className="w-8 h-8 text-green-500" />
+                    <h3 className="font-medium text-white">Multilingual Support</h3>
+                    <p className="text-sm text-gray-400">Choose language for better interaction</p>
+                  </div>
+                </Card>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {messages.map((message, i) => (
+                <div
+                  key={i}
+                  className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}
                 >
                   <div
-                    className={`inline-block p-3 rounded-lg ${
-                      message.role === "user"
-                        ? "bg-green-500 text-white"
-                        : "bg-gray-200 text-gray-900"
+                    className={`max-w-[80%] rounded-lg px-4 py-2 ${
+                      message.role === "user" ? "bg-green-500 text-white" : "bg-gray-800 text-white"
                     }`}
                   >
-                    <ReactMarkdown
-                      components={{
-                        code({ node, inline, className, children, ...props }) {
-                          const match = /language-(\w+)/.exec(className || "");
-                          return !inline && match ? (
-                            <SyntaxHighlighter
-                              style={atomDark}
-                              language={match[1]}
-                              PreTag="div"
-                              {...props}
-                            >
-                              {String(children).replace(/\n$/, "")}
-                            </SyntaxHighlighter>
-                          ) : (
-                            <code className={className} {...props}>
-                              {children}
-                            </code>
-                          );
-                        },
-                      }}
-                    >
-                      {message.content}
-                    </ReactMarkdown>
+                    {message.content}
                   </div>
-                </motion.div>
+                </div>
               ))}
-            </AnimatePresence>
-          </div>
-          {error && <div className="text-red-500 mb-4">{error}</div>}
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              handleSubmit(input);
-            }}
-            className="relative"
-          >
-            <input
-              type="text"
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              placeholder="Ask me anything..."
-              className="w-full py-3 px-4 pr-24 bg-gray-100 rounded-full text-gray-800 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-green-500"
-            />
-            <div className="absolute right-2 top-1/2 transform -translate-y-1/2 flex space-x-2">
-              <button
-                type="button"
-                onClick={handleSpeechRecognition}
-                disabled={isLoading}
-                className="p-2 text-green-500 hover:text-green-600 disabled:opacity-50"
-              >
-                {isListening ? (
-                  <Loader2 className="w-5 h-5 animate-spin" />
-                ) : (
-                  <Mic className="w-5 h-5" />
-                )}
-              </button>
-              <button
-                type="submit"
-                disabled={isLoading || !input.trim()}
-                className="p-2 text-green-500 hover:text-green-600 disabled:opacity-50"
-              >
-                {isLoading ? (
-                  <Loader2 className="w-5 h-5 animate-spin" />
-                ) : (
-                  <Send className="w-5 h-5" />
-                )}
-              </button>
+            </div>
+          )}
+        </ScrollArea>
+
+        {/* Input Area */}
+        <div className="border-t border-gray-800 p-4">
+          <Tabs defaultValue="all" className="mb-4">
+            <TabsList className="bg-gray-800">
+              <TabsTrigger value="all" className="text-white">
+                All
+              </TabsTrigger>
+              <TabsTrigger value="text" className="text-white">
+                Text
+              </TabsTrigger>
+              <TabsTrigger value="image" className="text-white">
+                Image
+              </TabsTrigger>
+              <TabsTrigger value="video" className="text-white">
+                Video
+              </TabsTrigger>
+              <TabsTrigger value="music" className="text-white">
+                Music
+              </TabsTrigger>
+              <TabsTrigger value="analytics" className="text-white">
+                Analytics
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
+          <form onSubmit={handleSubmit} className="flex gap-2">
+            <div className="relative flex-1">
+              <Input
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                placeholder="Type your prompt here..."
+                className="bg-gray-800 border-0 text-white placeholder:text-gray-400 pr-20"
+              />
+              <div className="absolute right-2 top-1/2 -translate-y-1/2 flex gap-1">
+                <Button type="button" variant="ghost" size="icon" className="text-gray-400 hover:text-white">
+                  <Mic className="w-4 h-4" />
+                </Button>
+                <Button type="submit" variant="ghost" size="icon" className="text-gray-400 hover:text-white">
+                  <Send className="w-4 h-4" />
+                </Button>
+              </div>
             </div>
           </form>
-          <div className="mt-4">
-            <button className="flex items-center space-x-2 text-green-500 hover:text-green-600">
-              <Sparkles className="w-5 h-5" />
-              <span>Topics</span>
-            </button>
-          </div>
         </div>
-      </motion.div>
+      </div>
     </div>
-  );
+  )
 }
