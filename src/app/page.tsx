@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { Folder, Image, MessageSquare, Mic, Music, PlusCircle, Send, Settings, Sparkles, TrendingUp } from "lucide-react"
+import { Folder, Image, MessageSquare, Mic, Music, PlusCircle, Send, Settings, Sparkles, TrendingUp, Menu } from "lucide-react"
 
 type Message = {
   role: "user" | "assistant"
@@ -24,6 +24,7 @@ export default function Component() {
   const [input, setInput] = useState("")
   const [searchQuery, setSearchQuery] = useState("")
   const [isLoading, setIsLoading] = useState(false)
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false)
   const scrollRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -46,6 +47,7 @@ export default function Component() {
     }
     setChats([...chats, newChat])
     setCurrentChatId(newChat.id)
+    setIsSidebarOpen(false)
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -55,7 +57,6 @@ export default function Component() {
     let updatedChats: Chat[]
 
     if (!currentChatId) {
-      // Create a new chat if there's no current chat
       const newChat: Chat = {
         id: Date.now().toString(),
         name: input,
@@ -64,7 +65,6 @@ export default function Component() {
       updatedChats = [...chats, newChat]
       setCurrentChatId(newChat.id)
     } else {
-      //@ts-ignore
       updatedChats = chats.map(chat => {
         if (chat.id === currentChatId) {
           const updatedMessages = [...chat.messages, { role: "user", content: input }]
@@ -82,7 +82,6 @@ export default function Component() {
     setInput("")
     setIsLoading(true)
 
-    // Simulate AI response
     setTimeout(() => {
       const newChats = updatedChats.map(chat => {
         if (chat.id === currentChatId) {
@@ -93,7 +92,6 @@ export default function Component() {
         }
         return chat
       })
-      //@ts-ignore
       setChats(newChats)
       setIsLoading(false)
     }, 1000)
@@ -102,10 +100,15 @@ export default function Component() {
   return (
     <div className="flex h-screen bg-black/95">
       {/* Sidebar */}
-      <div className="w-64 bg-gray-900 p-4 flex flex-col gap-4">
-        <div className="flex items-center gap-2 px-2 py-1">
-          <Sparkles className="w-5 h-5 text-green-500" />
-          <span className="font-semibold text-white">My Chats</span>
+      <div className={`${isSidebarOpen ? 'block' : 'hidden'} md:block fixed inset-y-0 left-0 z-50 w-64 bg-gray-900 p-4 flex flex-col gap-4 transition-all duration-300 ease-in-out transform ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'} md:relative md:translate-x-0`}>
+        <div className="flex items-center justify-between gap-2 px-2 py-1">
+          <div className="flex items-center gap-2">
+            <Sparkles className="w-5 h-5 text-green-500" />
+            <span className="font-semibold text-white">My Chats</span>
+          </div>
+          <Button variant="ghost" size="icon" className="md:hidden" onClick={() => setIsSidebarOpen(false)}>
+            <Menu className="w-5 h-5 text-white" />
+          </Button>
         </div>
         <Input 
           className="bg-gray-800 border-0 text-white placeholder:text-gray-400" 
@@ -113,14 +116,17 @@ export default function Component() {
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
         />
-        <div className="space-y-2">
+        <div className="space-y-2 flex-1 overflow-y-auto">
           <div className="text-sm text-gray-400 px-2">Chats</div>
           {filteredChats.map(chat => (
             <Button
               key={chat.id}
               variant="ghost"
               className={`w-full justify-start text-white ${currentChatId === chat.id ? 'bg-gray-800' : ''}`}
-              onClick={() => setCurrentChatId(chat.id)}
+              onClick={() => {
+                setCurrentChatId(chat.id)
+                setIsSidebarOpen(false)
+              }}
             >
               <MessageSquare className="w-4 h-4 mr-2" />
               {chat.name}
@@ -134,15 +140,16 @@ export default function Component() {
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col">
+      <div className="flex-1 flex flex-col w-full md:w-auto">
         {/* Header */}
         <div className="border-b border-gray-800 p-4 flex justify-between items-center">
+          <Button variant="ghost" size="icon" className="md:hidden" onClick={() => setIsSidebarOpen(true)}>
+            <Menu className="w-5 h-5 text-white" />
+          </Button>
           <h1 className="text-xl font-semibold text-white">{currentChat ? currentChat.name : "New chat"}</h1>
-          <div className="flex gap-2">
-            <Button variant="ghost" size="icon">
-              <Settings className="w-4 h-4 text-gray-400" />
-            </Button>
-          </div>
+          <Button variant="ghost" size="icon">
+            <Settings className="w-4 h-4 text-gray-400" />
+          </Button>
         </div>
 
         {/* Chat Area */}
@@ -159,7 +166,7 @@ export default function Component() {
                   message with the name entered by the user.
                 </p>
               </div>
-              <div className="grid grid-cols-3 gap-4 w-full max-w-2xl">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 w-full max-w-2xl">
                 <Card className="p-4 bg-gray-800 border-gray-700">
                   <div className="flex flex-col items-center gap-2 text-center">
                     <MessageSquare className="w-8 h-8 text-green-500" />
@@ -204,7 +211,7 @@ export default function Component() {
         </ScrollArea>
 
         {/* Input Area */}
-        <div className="border-t border-gray-800 p-4 pt-6">
+        <div className="border-t border-gray-800 p-4">
           <form onSubmit={handleSubmit} className="flex gap-2">
             <div className="relative flex-1">
               <Input
