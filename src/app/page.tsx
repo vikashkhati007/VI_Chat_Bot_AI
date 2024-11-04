@@ -4,13 +4,25 @@ import { useState, useRef, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Folder, Image, MessageSquare, Mic, Music, PlusCircle, Send, Settings, Sparkles, TrendingUp } from "lucide-react"
 
+type Message = {
+  role: "user" | "assistant"
+  content: string
+}
+
+type Chat = {
+  id: string
+  name: string
+  messages: Message[]
+}
+
 export default function Component() {
-  const [messages, setMessages] = useState([])
+  const [chats, setChats] = useState<Chat[]>([])
+  const [currentChatId, setCurrentChatId] = useState<string | null>(null)
   const [input, setInput] = useState("")
+  const [searchQuery, setSearchQuery] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const scrollRef = useRef<HTMLDivElement>(null)
 
@@ -18,19 +30,69 @@ export default function Component() {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight
     }
-  }, [messages])
+  }, [currentChatId, chats])
+
+  const currentChat = chats.find(chat => chat.id === currentChatId)
+
+  const filteredChats = chats.filter(chat => 
+    chat.name.toLowerCase().includes(searchQuery.toLowerCase())
+  )
+
+  const handleNewChat = () => {
+    const newChat: Chat = {
+      id: Date.now().toString(),
+      name: "New Chat",
+      messages: []
+    }
+    setChats([...chats, newChat])
+    setCurrentChatId(newChat.id)
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!input.trim()) return
 
-    setMessages((prev) => [...prev, { role: "user", content: input }])
+    let updatedChats: Chat[]
+
+    if (!currentChatId) {
+      // Create a new chat if there's no current chat
+      const newChat: Chat = {
+        id: Date.now().toString(),
+        name: input,
+        messages: [{ role: "user", content: input }]
+      }
+      updatedChats = [...chats, newChat]
+      setCurrentChatId(newChat.id)
+    } else {
+      updatedChats = chats.map(chat => {
+        if (chat.id === currentChatId) {
+          const updatedMessages = [...chat.messages, { role: "user", content: input }]
+          return {
+            ...chat,
+            name: chat.messages.length === 0 ? input : chat.name,
+            messages: updatedMessages
+          }
+        }
+        return chat
+      })
+    }
+
+    setChats(updatedChats)
     setInput("")
     setIsLoading(true)
 
     // Simulate AI response
     setTimeout(() => {
-      setMessages((prev) => [...prev, { role: "assistant", content: "I'm here to help! What would you like to know?" }])
+      const newChats = updatedChats.map(chat => {
+        if (chat.id === currentChatId) {
+          return {
+            ...chat,
+            messages: [...chat.messages, { role: "assistant", content: "I'm here to help! What would you like to know?" }]
+          }
+        }
+        return chat
+      })
+      setChats(newChats)
       setIsLoading(false)
     }, 1000)
   }
@@ -43,27 +105,27 @@ export default function Component() {
           <Sparkles className="w-5 h-5 text-green-500" />
           <span className="font-semibold text-white">My Chats</span>
         </div>
-        <Input className="bg-gray-800 border-0 text-white placeholder:text-gray-400" placeholder="Search" />
+        <Input 
+          className="bg-gray-800 border-0 text-white placeholder:text-gray-400" 
+          placeholder="Search chats" 
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+        />
         <div className="space-y-2">
-          <div className="text-sm text-gray-400 px-2">Folders</div>
-          <Button variant="ghost" className="w-full justify-start text-white">
-            <Folder className="w-4 h-4 mr-2" />
-            Work chats
-          </Button>
-          <Button variant="ghost" className="w-full justify-start text-white">
-            <Folder className="w-4 h-4 mr-2" />
-            Life chats
-          </Button>
-          <Button variant="ghost" className="w-full justify-start text-white">
-            <Folder className="w-4 h-4 mr-2" />
-            Projects chats
-          </Button>
-          <Button variant="ghost" className="w-full justify-start text-white">
-            <Folder className="w-4 h-4 mr-2" />
-            Clients chats
-          </Button>
+          <div className="text-sm text-gray-400 px-2">Chats</div>
+          {filteredChats.map(chat => (
+            <Button
+              key={chat.id}
+              variant="ghost"
+              className={`w-full justify-start text-white ${currentChatId === chat.id ? 'bg-gray-800' : ''}`}
+              onClick={() => setCurrentChatId(chat.id)}
+            >
+              <MessageSquare className="w-4 h-4 mr-2" />
+              {chat.name}
+            </Button>
+          ))}
         </div>
-        <Button className="mt-auto bg-green-500 hover:bg-green-600">
+        <Button className="mt-auto bg-green-500 hover:bg-green-600" onClick={handleNewChat}>
           <PlusCircle className="w-4 h-4 mr-2" />
           New chat
         </Button>
@@ -73,7 +135,7 @@ export default function Component() {
       <div className="flex-1 flex flex-col">
         {/* Header */}
         <div className="border-b border-gray-800 p-4 flex justify-between items-center">
-          <h1 className="text-xl font-semibold text-white">New chat</h1>
+          <h1 className="text-xl font-semibold text-white">{currentChat ? currentChat.name : "New chat"}</h1>
           <div className="flex gap-2">
             <Button variant="ghost" size="icon">
               <Settings className="w-4 h-4 text-gray-400" />
@@ -83,7 +145,7 @@ export default function Component() {
 
         {/* Chat Area */}
         <ScrollArea ref={scrollRef} className="flex-1 p-4">
-          {messages.length === 0 ? (
+          {!currentChat || currentChat.messages.length === 0 ? (
             <div className="h-full flex flex-col items-center justify-center gap-8 text-center p-4">
               <div className="w-20 h-20 rounded-full bg-gradient-to-br from-green-400 to-green-600 flex items-center justify-center">
                 <Sparkles className="w-10 h-10 text-white" />
@@ -121,7 +183,7 @@ export default function Component() {
             </div>
           ) : (
             <div className="space-y-4">
-              {messages.map((message, i) => (
+              {currentChat.messages.map((message, i) => (
                 <div
                   key={i}
                   className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}
@@ -140,29 +202,7 @@ export default function Component() {
         </ScrollArea>
 
         {/* Input Area */}
-        <div className="border-t border-gray-800 p-4">
-          <Tabs defaultValue="all" className="mb-4">
-            <TabsList className="bg-gray-800">
-              <TabsTrigger value="all" className="text-white">
-                All
-              </TabsTrigger>
-              <TabsTrigger value="text" className="text-white">
-                Text
-              </TabsTrigger>
-              <TabsTrigger value="image" className="text-white">
-                Image
-              </TabsTrigger>
-              <TabsTrigger value="video" className="text-white">
-                Video
-              </TabsTrigger>
-              <TabsTrigger value="music" className="text-white">
-                Music
-              </TabsTrigger>
-              <TabsTrigger value="analytics" className="text-white">
-                Analytics
-              </TabsTrigger>
-            </TabsList>
-          </Tabs>
+        <div className="border-t border-gray-800 p-4 pt-6">
           <form onSubmit={handleSubmit} className="flex gap-2">
             <div className="relative flex-1">
               <Input
@@ -175,7 +215,7 @@ export default function Component() {
                 <Button type="button" variant="ghost" size="icon" className="text-gray-400 hover:text-white">
                   <Mic className="w-4 h-4" />
                 </Button>
-                <Button type="submit" variant="ghost" size="icon" className="text-gray-400 hover:text-white">
+                <Button type="submit" variant="ghost" size="icon" className="text-gray-400 hover:text-white" disabled={isLoading}>
                   <Send className="w-4 h-4" />
                 </Button>
               </div>
