@@ -64,6 +64,7 @@ export default function Component() {
       updatedChats = [...chats, newChat]
       setCurrentChatId(newChat.id)
     } else {
+      //@ts-ignore
       updatedChats = chats.map(chat => {
         if (chat.id === currentChatId) {
           const updatedMessages = [...chat.messages, { role: "user", content: input }]
@@ -92,6 +93,7 @@ export default function Component() {
         }
         return chat
       })
+      //@ts-ignore
       setChats(newChats)
       setIsLoading(false)
     }, 1000)
