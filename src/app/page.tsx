@@ -18,7 +18,7 @@ type Chat = {
   messages: Message[]
 }
 
-export default function Component() {
+export default function ChatApp() {
   const [chats, setChats] = useState<Chat[]>([])
   const [currentChatId, setCurrentChatId] = useState<string | null>(null)
   const [input, setInput] = useState("")
@@ -65,6 +65,7 @@ export default function Component() {
       updatedChats = [...chats, newChat]
       setCurrentChatId(newChat.id)
     } else {
+      //@ts-ignore
       updatedChats = chats.map(chat => {
         if (chat.id === currentChatId) {
           const updatedMessages = [...chat.messages, { role: "user", content: input }]
@@ -82,19 +83,45 @@ export default function Component() {
     setInput("")
     setIsLoading(true)
 
-    setTimeout(() => {
+    try {
+      const url = process.env.NEXT_PUBLIC_HOST_URL
+      if (!url) {
+        throw new Error('Host URL is not defined')
+      }
+
+      const options = {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-RapidAPI-Key": process.env.NEXT_PUBLIC_APIKEY_URL || '',
+          "X-RapidAPI-Host": process.env.NEXT_PUBLIC_APIHOST || '',
+        },
+        body: JSON.stringify({ query: input }),
+      }
+
+      const res = await fetch(url, options)
+      if (!res.ok) {
+        throw new Error(`HTTP error! status: ${res.status}`)
+      }
+      const data = await res.json()
+
       const newChats = updatedChats.map(chat => {
         if (chat.id === currentChatId) {
           return {
             ...chat,
-            messages: [...chat.messages, { role: "assistant", content: "I'm here to help! What would you like to know?" }]
+            messages: [...chat.messages, { role: "assistant", content: JSON.stringify(data) }]
           }
         }
         return chat
       })
+      //@ts-ignore
       setChats(newChats)
+    } catch (error) {
+      console.error('Error:', error)
+      // You might want to add error handling here, such as displaying an error message to the user
+    } finally {
       setIsLoading(false)
-    }, 1000)
+    }
   }
 
   return (
@@ -107,6 +134,7 @@ export default function Component() {
             <span className="font-semibold text-white">My Chats</span>
           </div>
           <Button variant="ghost" size="icon" className="md:hidden" onClick={() => setIsSidebarOpen(false)}>
+            <span className="sr-only">Close sidebar</span>
             <Menu className="w-5 h-5 text-white" />
           </Button>
         </div>
@@ -144,10 +172,12 @@ export default function Component() {
         {/* Header */}
         <div className="border-b border-gray-800 p-4 flex justify-between items-center">
           <Button variant="ghost" size="icon" className="md:hidden" onClick={() => setIsSidebarOpen(true)}>
+            <span className="sr-only">Open sidebar</span>
             <Menu className="w-5 h-5 text-white" />
           </Button>
           <h1 className="text-xl font-semibold text-white">{currentChat ? currentChat.name : "New chat"}</h1>
           <Button variant="ghost" size="icon">
+            <span className="sr-only">Settings</span>
             <Settings className="w-4 h-4 text-gray-400" />
           </Button>
         </div>
@@ -222,9 +252,11 @@ export default function Component() {
               />
               <div className="absolute right-2 top-1/2 -translate-y-1/2 flex gap-1">
                 <Button type="button" variant="ghost" size="icon" className="text-gray-400 hover:text-white">
+                  <span className="sr-only">Voice input</span>
                   <Mic className="w-4 h-4" />
                 </Button>
                 <Button type="submit" variant="ghost" size="icon" className="text-gray-400 hover:text-white" disabled={isLoading}>
+                  <span className="sr-only">Send message</span>
                   <Send className="w-4 h-4" />
                 </Button>
               </div>
